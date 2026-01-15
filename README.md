@@ -1,7 +1,9 @@
+# Improving Retinal Artery-Vein Segmentation via Geometric Energy Fields
 
-This repository contains the official PyTorch implementation of the paper:  
+This repository contains the official PyTorch implementation of the paper:
+
 **"Improving Retinal Artery-Vein Segmentation via Geometric Energy Fields"**  
-*Mingchao Li, Wenbo Zhang, Zhilin Zhou, Yizhe Zhang, Qiang Chen, Junyu Dong*  
+*Mingchao Li, Wenbo Zhang, Zhilin Zhou, Yizhe Zhang, Qiang Chen, Junyu Dong*
 
 ---
 
@@ -14,62 +16,68 @@ We propose a **Geometric Energy Field (GEF)** supervision framework to enhance t
 
 These geometry-aware energy fields provide explicit supervision beyond local appearance cues, leading to more coherent and clinically plausible A/V segmentation.
 
+---
+
 ## 📂 Project Structure
 
+```
 GEFAV/
-├── data/ # Dataset directories (images, labels, energy fields)
+├── data/                  Dataset directories (images, labels, energy fields)
 ├── logs/
-│ ├── best_model # Best trained models saved here
-│ ├── checkpoints # Model checkpoints per epoch
+│   ├── best_model         Best trained models saved here
+│   ├── checkpoints        Model checkpoints per epoch
 ├── models/
-│ ├── MAUNet.py # Main GEF network
-│ ├── uneta.py # Baseline multi-attention U-Net
+│   ├── MAUNet.py          Main GEF network
+│   ├── uneta.py           Baseline multi-attention U-Net
 ├── options/
-│ ├── base_options.py # Shared configuration
-│ ├── train_options.py # Training configuration
-│ ├── test_options.py # Testing configuration
-├── BatchDataReader.py # Dataset reader with augmentation
-├── utils.py # Utility functions, metrics computation
-├── GEF.py # Energy field generation (DEF + OEF)
-├── train.py # Training script
-├── test.py # Testing script
+│   ├── base_options.py    Shared configuration
+│   ├── train_options.py   Training configuration
+│   ├── test_options.py    Testing configuration
+├── BatchDataReader.py     Dataset reader with augmentation
+├── utils.py               Utility functions, metrics computation
+├── GEF.py                 Energy field generation (DEF + OEF)
+├── train.py               Training script
+├── test.py                Testing script
 └── README.md
+```
 
+---
 
 ## ✨ Key Features
 
 ### 🔧 Energy Field Generation
-- **DEF**: Distance-based energy fields with multiple formulations (Gaussian, linear, exponential, inverse)
-- **OEF**: Orientation-based energy fields using cosine or angle encoding
-- Automatic generation and saving of energy maps for arteries, veins, and mixed channels
+- **DEF:** Distance-based energy fields with multiple formulations (Gaussian, linear, exponential, inverse).  
+- **OEF:** Orientation-based energy fields using cosine or angle encoding.  
+- Automatic generation and saving of energy maps for arteries, veins, and mixed channels.
 
 ### 🧠 Multi-task Network Architecture
-- **MAUNet**: Dual-output network for simultaneous vessel segmentation and energy field regression
-- Supports multi-channel input (OCTA layers)
-- Alternating training strategy between segmentation and energy regression tasks
+- **MAUNet:** Dual-output network for simultaneous vessel segmentation and energy field regression.  
+- Supports multi-channel input (OCTA layers).  
+- Alternating training strategy between segmentation and energy regression tasks.
 
 ### 📊 Data Pipeline
-- Supports multi-modal input, multi-label segmentation, and energy maps
-- Synchronized geometric and photometric data augmentation
-- Efficient batch loading with prefetching
+- Supports multi-modal input, multi-label segmentation, and energy maps.  
+- Synchronized geometric and photometric data augmentation.  
+- Efficient batch loading with prefetching.
 
 ### 📈 Evaluation Framework
-- **Pixel-level metrics**: Dice, Accuracy, Sensitivity, Specificity
-- **Structure-level metrics**: clDice, HD95
-- Comprehensive outputs: binary masks, RGB visualizations, and energy maps
+- **Pixel-level metrics:** Dice, Accuracy, Sensitivity, Specificity.  
+- **Structure-level metrics:** clDice, HD95.  
+- Comprehensive outputs: binary masks, RGB visualizations, and energy maps.
 
 ### 🌐 Cross-Dataset Testing
-- Predefined dataset configurations for generalization assessment
-- Automatic summary CSV export across all datasets
+- Predefined dataset configurations for generalization assessment.  
+- Automatic summary CSV export across all datasets.
 
 ---
 
 ## ⚙️ Installation
 
 ### Dependencies
-Tested with **Python 3.10+** and the following packages:
 
-```txt
+Tested with **Python 3.10+**:
+
+```
 torch >= 2.1
 numpy >= 1.24
 opencv-python >= 4.8
@@ -81,6 +89,7 @@ pandas >= 2.0
 prefetch_generator >= 1.0
 natsort >= 8.4
 torchsummary >= 1.5
+```
 
 Install via pip:
 
@@ -88,79 +97,80 @@ Install via pip:
 pip install torch numpy opencv-python scikit-image scipy \
             albumentations tqdm pandas prefetch_generator \
             natsort torchsummary
+```
 
+---
 
-🚀 Usage
-Step 1: Generate Energy Fields
+## 🚀 Usage
+
+### Step 1: Generate Energy Fields
 Before training, generate DEF and OEF maps from binary vessel masks:
 
-bash
+```bash
 python GEF.py
-This creates the following directories under your data folder:
+```
 
-DEF_A/, DEF_V/, DEF_M/ - Distance energy fields
+This will create the following directories under your data folder:
 
-OEF_A/, OEF_V/, OEF_M/ - Orientation energy fields
+- `DEF_A/`, `DEF_V/`, `DEF_M/` — Distance energy fields  
+- `OEF_A/`, `OEF_V/`, `OEF_M/` — Orientation energy fields  
 
-Step 2: Training
-Train the GEF model with the following command:
+### Step 2: Training
 
-bash
-python train.py \
-    --trainroot ./data/train \
-    --testroot ./data/val \
-    --saveroot ./logs
-Training Process:
+Train the GEF model:
 
-Alternates between segmentation and energy regression phases
+```bash
+python train.py --trainroot ./data/train --testroot ./data/val --saveroot ./logs
+```
 
-Checkpoints saved in logs/checkpoints/
+**Training process:**
 
-Best model saved in logs/best_model/
+- Alternates between segmentation and energy regression phases.  
+- Checkpoints saved in `logs/checkpoints/`.  
+- Best model saved in `logs/best_model/`.
 
-Step 3: Testing & Inference
-Evaluate the trained model on test data:
+### Step 3: Testing & Inference
 
-bash
-python test.py \
-    --testroot ./data/test \
-    --saveroot ./logs
-Outputs:
+Evaluate the trained model:
 
-Binary masks: saveroot/test_results/artery/, saveroot/test_results/vein/
+```bash
+python test.py --testroot ./data/test --saveroot ./logs
+```
 
-RGB visualizations: saveroot/test_visuals/
+**Outputs:**
 
-Energy maps: saveroot/test_results/energy/
+- Binary masks: `saveroot/test_results/artery/`, `saveroot/test_results/vein/`  
+- RGB visualizations: `saveroot/test_visuals/`  
+- Energy maps: `saveroot/test_results/energy/`  
+- Evaluation summary: `saveroot/all_datasets_summary.csv`
 
-Evaluation summary: saveroot/all_datasets_summary.csv
+---
 
-⚙️ Configuration
-All training and testing parameters are configurable through the options/ directory:
+## ⚙️ Configuration
 
-File	Description
-base_options.py	Shared dataset, channels, and path configurations
-train_options.py	Training-specific parameters (batch size, epochs, optimizer)
-test_options.py	Testing-specific parameters (thresholds, dataset selection)
+All training and testing parameters are configurable through the `options/` directory:
+
+| File                  | Description                                      |
+|-----------------------|--------------------------------------------------|
+| `base_options.py`     | Shared dataset, channels, and path configurations |
+| `train_options.py`    | Training-specific parameters (batch size, epochs, optimizer) |
+| `test_options.py`     | Testing-specific parameters (thresholds, dataset selection) |
+
 Key configurable parameters include:
 
-Energy field types (DEF/OEF)
+- Energy field types (DEF/OEF)  
+- Network architecture choices  
+- Loss function weights  
+- Data augmentation settings  
+- Evaluation metrics selection
 
-Network architecture choices
+---
 
-Loss function weights
+## 📊 Results & Performance
 
-Data augmentation settings
+For detailed quantitative results and visual comparisons, please refer to the original paper. The implemented method achieves state-of-the-art performance on multiple retinal datasets:
 
-Evaluation metrics selection
-
-📊 Results & Performance
-For detailed quantitative results and visual comparisons, please refer to the original paper. The implemented method achieves state-of-the-art performance on multiple retinal datasets including:
-
-DRIVE-AV: 76.8% Dice
-
-AVRDB: 63.4% Dice
-
-LES-AV: 77.3% Dice
-
-OCTA-500: 88.8% Dice
+- **DRIVE-AV:** 76.8% Dice  
+- **AVRDB:** 63.4% Dice  
+- **LES-AV:** 77.3% Dice  
+- **OCTA-500:** 88.8% Dice
