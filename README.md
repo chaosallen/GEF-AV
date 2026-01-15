@@ -15,6 +15,7 @@ We propose a **Geometric Energy Field (GEF)** supervision framework to enhance t
 - **Orientation Energy Field (OEF):** Models vessel elongation and directional continuity.
 
 These geometry-aware energy fields provide explicit supervision beyond local appearance cues, leading to more coherent and clinically plausible A/V segmentation.
+
 ![GEF Workflow](framework.png)
 ---
 
