@@ -15,7 +15,7 @@ We propose a **Geometric Energy Field (GEF)** supervision framework to enhance t
 - **Orientation Energy Field (OEF):** Models vessel elongation and directional continuity.
 
 These geometry-aware energy fields provide explicit supervision beyond local appearance cues, leading to more coherent and clinically plausible A/V segmentation.
-
+![GEF Workflow](framework.png)
 ---
 
 ## 📂 Project Structure
@@ -50,11 +50,6 @@ GEFAV/
 - **OEF:** Orientation-based energy fields using cosine or angle encoding.  
 - Automatic generation and saving of energy maps for arteries, veins, and mixed channels.
 
-### 🧠 Multi-task Network Architecture
-- **MAUNet:** Dual-output network for simultaneous vessel segmentation and energy field regression.  
-- Supports multi-channel input (OCTA layers).  
-- Alternating training strategy between segmentation and energy regression tasks.
-
 ### 📊 Data Pipeline
 - Supports multi-modal input, multi-label segmentation, and energy maps.  
 - Synchronized geometric and photometric data augmentation.  
@@ -64,10 +59,6 @@ GEFAV/
 - **Pixel-level metrics:** Dice, Accuracy, Sensitivity, Specificity.  
 - **Structure-level metrics:** clDice, HD95.  
 - Comprehensive outputs: binary masks, RGB visualizations, and energy maps.
-
-### 🌐 Cross-Dataset Testing
-- Predefined dataset configurations for generalization assessment.  
-- Automatic summary CSV export across all datasets.
 
 ---
 
