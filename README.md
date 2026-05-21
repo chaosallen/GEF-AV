@@ -162,5 +162,5 @@ Key configurable parameters include:
 
 Below are comparison results demonstrating the effectiveness of our proposed Geometric Energy Field (GEF) framework.
 
-![Result1](results1.png)
-![Result2](results2.png)
+![Result1](result1.png)
+![Result2](result2.png)
