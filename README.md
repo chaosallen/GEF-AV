@@ -28,13 +28,8 @@ GEFAV/
 │   ├── best_model         Best trained models saved here
 │   ├── checkpoints        Model checkpoints per epoch
 ├── models/
-<<<<<<< HEAD
 │   ├── MAUNet2.py          2-stage multi-attention U-Net(Main GEF network)
 │   ├── MAUNet.py           multi-attention U-Net
-=======
-│   ├── MAUNet.py          Main GEF network
-│   ├── uneta.py           Baseline multi-attention U-Net
->>>>>>> e7c7c5ad64aca217c1bae3c1034fb84cd7decb3a
 ├── options/
 │   ├── base_options.py    Shared configuration
 │   ├── train_options.py   Training configuration
@@ -63,11 +58,9 @@ GEFAV/
 
 ### 📈 Evaluation Framework
 - **Pixel-level metrics:** Dice, Accuracy, Sensitivity, Specificity.  
-<<<<<<< HEAD
+
 - **Structure-level metrics:** clDice, HD95, INF, COR.  
-=======
-- **Structure-level metrics:** clDice, HD95.  
->>>>>>> e7c7c5ad64aca217c1bae3c1034fb84cd7decb3a
+
 - Comprehensive outputs: binary masks, RGB visualizations, and energy maps.
 
 ---
@@ -164,17 +157,5 @@ Key configurable parameters include:
 - Loss function weights  
 - Data augmentation settings  
 - Evaluation metrics selection
-<<<<<<< HEAD
-=======
 
----
 
-## 📊 Results & Performance
-
-For detailed quantitative results and visual comparisons, please refer to the original paper. The implemented method achieves state-of-the-art performance on multiple retinal datasets:
-
-- **DRIVE-AV:** 76.8% Dice  
-- **AVRDB:** 63.4% Dice  
-- **LES-AV:** 77.3% Dice  
-- **OCTA-500:** 88.8% Dice
->>>>>>> e7c7c5ad64aca217c1bae3c1034fb84cd7decb3a
