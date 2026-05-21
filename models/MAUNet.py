@@ -2,8 +2,7 @@
 import torch
 import torch.nn as nn
 
-# MultiAttention UNet
-#Channel Attention
+# 注意力模块
 class SEBlock(nn.Module):
     def __init__(self, channels, reduction=16):
         super(SEBlock, self).__init__()
@@ -21,7 +20,6 @@ class SEBlock(nn.Module):
         y = self.fc(y).view(b, c, 1, 1)
         return x * y
 
-#Spatial Attention
 class SpatialAttention(nn.Module):
     def __init__(self, kernel_size=7):
         super(SpatialAttention, self).__init__()
@@ -30,14 +28,13 @@ class SpatialAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x_input = x
+        x_input = x  # 保留原始输入
         max_out, _ = torch.max(x_input, dim=1, keepdim=True)
         avg_out = torch.mean(x_input, dim=1, keepdim=True)
         x = torch.cat([avg_out, max_out], dim=1)
         attn = self.sigmoid(self.conv(x))
-        return x_input * attn
+        return x_input * attn  # 输出与输入 shape 相同
 
-#Self Attention
 class SelfAttention2D(nn.Module):
     def __init__(self, in_dim):
         super(SelfAttention2D, self).__init__()
@@ -83,7 +80,6 @@ class unetConv2(nn.Module):
                 setattr(self, 'conv%d' % i, conv)
                 in_size = out_size
         self.se = SEBlock(out_size)
-        #self.dropout = nn.Dropout2d(p=0.1)
 
 
     def forward(self, inputs):
@@ -92,7 +88,6 @@ class unetConv2(nn.Module):
             conv = getattr(self, 'conv%d' % i)
             x = conv(x)
         x=self.se(x)
-        #x = self.dropout(x)
         return x
 
 class unetUp(nn.Module):
@@ -116,14 +111,13 @@ class unetUp(nn.Module):
 
 class MAUNet(nn.Module):
 
-    def __init__(self, in_channels, n_classes, channels=64,channels1st=2, is_deconv=True, is_batchnorm=True):
+    def __init__(self, in_channels, n_classes, channels=64, is_deconv=True, is_batchnorm=True):
         super(MAUNet, self).__init__()
         self.is_deconv = is_deconv
         self.in_channels = in_channels
         self.is_batchnorm = is_batchnorm
         self.channels = channels
         self.n_classes=n_classes
-        self.channels1st=channels1st
 
         # downsampling
         self.conv1 = unetConv2(self.in_channels, self.channels, self.is_batchnorm)
@@ -147,31 +141,9 @@ class MAUNet(nn.Module):
         self.up_concat2 = unetUp(self.channels*4, self.channels*2, self.is_deconv)
         self.up_concat1 = unetUp(self.channels*2, self.channels, self.is_deconv)
 
-        self.outconv1 = nn.Conv2d(self.channels,self.channels1st, 3, padding=1)
+        #energy layer
+        self.outconv1 = nn.Conv2d(self.channels, self.n_classes, 3, padding=1)
 
-        # downsampling
-        self.conv5 = unetConv2(self.channels1st+self.in_channels, self.channels, self.is_batchnorm)
-        self.maxpool5 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv6 = unetConv2(self.channels, self.channels * 2, self.is_batchnorm)
-        self.maxpool6 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv7 = unetConv2(self.channels * 2, self.channels * 4, self.is_batchnorm)
-        self.maxpool7 = nn.MaxPool2d(kernel_size=2)
-
-        self.conv8 = unetConv2(self.channels * 4, self.channels * 8, self.is_batchnorm)
-        self.maxpool8 = nn.MaxPool2d(kernel_size=2)
-
-        self.center2 = unetConv2(self.channels * 8, self.channels * 16, self.is_batchnorm)
-        self.attn2 = SelfAttention2D(self.channels * 16)
-
-        # upsampling
-        self.up_concat8 = unetUp(self.channels * 16, self.channels * 8, self.is_deconv)
-        self.up_concat7 = unetUp(self.channels * 8, self.channels * 4, self.is_deconv)
-        self.up_concat6 = unetUp(self.channels * 4, self.channels * 2, self.is_deconv)
-        self.up_concat5 = unetUp(self.channels * 2, self.channels, self.is_deconv)
-
-        self.outconv2 = nn.Conv2d(self.channels, self.n_classes, 3, padding=1)
 
 
     def forward(self, inputs):
@@ -187,39 +159,15 @@ class MAUNet(nn.Module):
         conv4 = self.conv4(maxpool3)
         maxpool4 = self.maxpool4(conv4)
 
-        center1 = self.center1(maxpool4)
-        center1 = self.attn1(center1)
+        center = self.center1(maxpool4)
+        center = self.attn1(center)
 
 
-        up4 = self.up_concat4(center1, conv4)
+        up4 = self.up_concat4(center, conv4)
         up3 = self.up_concat3(up4, conv3)
         up2 = self.up_concat2(up3, conv2)
         up1 = self.up_concat1(up2, conv1)
 
         output1 = self.outconv1(up1)
-        output1a = torch.cat([output1, inputs], 1)
 
-        conv5 = self.conv5(output1a)
-        maxpool5 = self.maxpool5(conv5)
-
-        conv6 = self.conv6(maxpool5)
-        maxpool6 = self.maxpool6(conv6)
-
-        conv7 = self.conv7(maxpool6)
-        maxpool7 = self.maxpool7(conv7)
-
-        conv8 = self.conv8(maxpool7)
-        maxpool8 = self.maxpool8(conv8)
-
-        center2 = self.center2(maxpool8)
-        center2 = self.attn2(center2)
-
-        up8 = self.up_concat8(center2, conv8)
-        up7 = self.up_concat7(up8, conv7)
-        up6 = self.up_concat6(up7, conv6)
-        up5 = self.up_concat5(up6, conv5)
-
-        output2=self.outconv2(up5)
-
-
-        return output1,output2
+        return output1

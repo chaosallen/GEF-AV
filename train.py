@@ -4,7 +4,7 @@ import numpy as np
 import logging
 import sys
 import os
-from models.MAUNet import MAUNet
+from models.MAUNet2 import MAUNet
 import utils
 import shutil
 import natsort

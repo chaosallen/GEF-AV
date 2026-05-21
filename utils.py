@@ -10,6 +10,9 @@ import pandas as pd
 import math
 from skimage.morphology import skeletonize
 from medpy.metric import binary
+from skimage import morphology, graph
+from random import randint
+import logging
 
 def soft_skel(x, iter_num=10):
     """
@@ -211,16 +214,140 @@ class CrossBCEFromSegLoss(nn.Module):
         loss = self.bce(pred_cross, gt_cross)
         return loss
 
-def compute_metrics(pred, gt):
+import numpy as np
+from skimage import morphology, graph
+from random import randint
+
+
+def topo_metric(gt, pred, thresh, n_paths):
+    """
+    计算拓扑度量：INF（不可达路径）和COR（正确路径）
+
+    参数：
+        gt: 真实标签（二值图像，0或1）
+        pred: 预测结果（二值图像，0或1）
+        thresh: 阈值（用于二值化预测）
+        n_paths: 随机采样的路径数量
+
+    返回：
+        (inf_count, mid_count, cor_count): 不可达、中间、正确路径的计数
+    """
+    result = []
+
+    # 确保输入为二值 - 修复1：使用 int 而不是 np.int
+    gt_bw = (gt > 0.5).astype(int)
+
+    # 修复2：修正类型检查逻辑
+    if isinstance(pred, np.ndarray):
+        # 如果已经是整数或布尔类型，直接转换；否则根据阈值二值化
+        if pred.dtype.kind in 'ui' or pred.dtype == bool:
+            pred_bw = pred.astype(int)
+        else:
+            pred_bw = (pred > thresh).astype(int)
+    else:
+        pred_bw = (pred > thresh).astype(int)
+
+    # 获取连通组件
+    pred_cc = morphology.label(pred_bw)
+
+    # 获取骨架线
+    gt_cent = morphology.skeletonize(gt_bw)
+    gt_cent_cc = morphology.label(gt_cent)
+    pred_cent = morphology.skeletonize(pred_bw)
+
+    # 代价矩阵（用于最短路径计算）
+    gt_cost = np.ones(gt_cent.shape)
+    gt_cost[gt_cent == 0] = 10000
+    pred_cost = np.ones(pred_cent.shape)
+    pred_cost[pred_cent == 0] = 10000
+
+    # 获取骨架点坐标
+    R_gt_cent, C_gt_cent = np.where(gt_cent == 1)
+
+    # 如果没有足够的骨架点，返回空结果
+    if len(R_gt_cent) < 2:
+        return 0, 0, 0
+
+    for _i in range(n_paths):
+        # 随机选择第一个点 - 修复3：转换为 Python int
+        idx1 = randint(0, len(R_gt_cent) - 1)
+        label = gt_cent_cc[R_gt_cent[idx1], C_gt_cent[idx1]]
+        ptx1 = (int(R_gt_cent[idx1]), int(C_gt_cent[idx1]))
+
+        # 选择同一连通区域内的第二个点
+        R_gt_cent_label, C_gt_cent_label = np.where(gt_cent_cc == label)
+        if len(R_gt_cent_label) < 2:
+            continue
+        idx2 = randint(0, len(R_gt_cent_label) - 1)
+        ptx2 = (int(R_gt_cent_label[idx2]), int(C_gt_cent_label[idx2]))
+
+        # 检查预测中两点是否在同一连通区域
+        if (pred_cc[ptx1] != pred_cc[ptx2]) or pred_cc[ptx1] == 0:
+            result.append(0)  # 不可达
+        else:
+            # 找到预测骨架中的对应点
+            R_pred_cent, C_pred_cent = np.where(pred_cent == 1)
+            if len(R_pred_cent) == 0:
+                result.append(0)
+                continue
+
+            poss_corr = np.column_stack((R_pred_cent, C_pred_cent))
+            dist2_ptx1 = np.sum((poss_corr - np.array(ptx1)) ** 2, axis=1)
+            dist2_ptx2 = np.sum((poss_corr - np.array(ptx2)) ** 2, axis=1)
+            corr1 = tuple(poss_corr[np.argmin(dist2_ptx1)].astype(int))
+            corr2 = tuple(poss_corr[np.argmin(dist2_ptx2)].astype(int))
+
+            # 计算真实路径长度
+            try:
+                gt_path, _cost1 = graph.route_through_array(gt_cost, ptx1, ptx2)
+                if gt_path is None or len(gt_path) < 2:
+                    result.append(0)
+                    continue
+                gt_path = np.asarray(gt_path)
+                path_gt_length = np.sum(np.sqrt(np.sum(np.diff(gt_path, axis=0) ** 2, axis=1)))
+            except Exception:
+                result.append(0)
+                continue
+
+            # 计算预测路径长度
+            try:
+                pred_path, _cost2 = graph.route_through_array(pred_cost, corr1, corr2)
+                if pred_path is None:
+                    result.append(0)
+                    continue
+                pred_path = np.asarray(pred_path)
+                if pred_path.shape[0] < 2:
+                    result.append(2)  # 单点视为正确
+                else:
+                    path_pred_length = np.sum(np.sqrt(np.sum(np.diff(pred_path, axis=0) ** 2, axis=1)))
+                    if path_pred_length == 0:
+                        result.append(2)
+                    else:
+                        ratio = path_gt_length / path_pred_length
+                        if ratio < 0.9 or ratio > 1.1:
+                            result.append(1)  # 长度差异大
+                        else:
+                            result.append(2)  # 正确
+            except Exception:
+                result.append(0)
+
+    return result.count(0), result.count(1), result.count(2)
+
+def compute_metrics(pred, gt, topo_thresh=0.5, topo_n_paths=500):
     """
     计算二值图像的分割性能指标：
-    Dice, IoU, Accuracy, Sensitivity, Specificity, HD95
+    Dice, IoU, Accuracy, Sensitivity, Specificity, HD95, INF, COR
     参数：
         pred: 预测掩膜（ndarray，二值，0或1）
         gt:   真值掩膜（ndarray，二值，0或1）
+        topo_thresh: 拓扑度量的阈值（默认0.5）
+        topo_n_paths: 拓扑度量的随机路径数（默认100）
     返回：
         metrics: dict，包含每个指标名称及其值
     """
+    from skimage import morphology, graph
+    from random import randint
+
     pred = pred.astype(bool)
     gt = gt.astype(bool)
 
@@ -235,6 +362,7 @@ def compute_metrics(pred, gt):
     se = TP / (TP + FN + 1e-8)  # Sensitivity
     sp = TN / (TN + FP + 1e-8)  # Specificity
     cl_dice = compute_clDice(pred, gt)
+
     # HD95 计算，若预测或标签全为0，设为nan
     if np.any(pred) and np.any(gt):
         try:
@@ -244,14 +372,66 @@ def compute_metrics(pred, gt):
     else:
         hd95 = np.nan
 
+    # 计算拓扑度量 INF 和 COR
+    try:
+        # 确保输入为二值图像且类型正确
+        gt_binary = gt.astype(np.uint8)
+        pred_binary = pred.astype(np.uint8)
+
+        # 调用拓扑度量函数
+        inf_count, _, cor_count = topo_metric(gt_binary, pred_binary, topo_thresh, topo_n_paths)
+
+        # 转换为比率（0-1之间），便于与其他指标比较
+        total_paths = inf_count + cor_count + (topo_n_paths - inf_count - cor_count)
+        if total_paths > 0:
+            inf = inf_count / total_paths  # 不可达路径比例
+            cor = cor_count / total_paths  # 正确路径比例
+        else:
+            inf = np.nan
+            cor = np.nan
+    except Exception as e:
+        # 如果拓扑度量计算失败，设为nan
+        inf = np.nan
+        cor = np.nan
+        logging.warning(f"拓扑度量计算失败: {e}")
+
     return {
         'Dice': dice,
+        'IoU': iou,
         'Accuracy': acc,
         'Sensitivity': se,
         'Specificity': sp,
         'clDice': cl_dice,
-        'HD95': hd95
+        'HD95': hd95,
+        'INF': inf,  # 不可达路径比例
+        'COR': cor  # 正确路径比例
     }
+
+
+def compute_clDice(pred, gt):
+    """
+    计算clDice指标
+    pred, gt: 二值数组, shape (H, W)
+    """
+    pred = pred.astype(bool)
+    gt = gt.astype(bool)
+
+    if pred.sum() == 0 or gt.sum() == 0:
+        return np.nan
+
+    # 提取骨架
+    skel_pred = skeletonize(pred)
+    skel_gt = skeletonize(gt)
+
+    # Precision-like: 预测骨架落在GT区域的比例
+    P = (skel_pred & gt).sum() / (skel_pred.sum() + 1e-8)
+
+    # Recall-like: GT骨架落在预测区域的比例
+    R = (skel_gt & pred).sum() / (skel_gt.sum() + 1e-8)
+
+    cl_dice = 2 * P * R / (P + R + 1e-8)
+    return cl_dice
+
 
 def evaluate_and_save(preds, gts, names, save_csv_path):
     """
@@ -303,31 +483,6 @@ def evaluate_and_save(preds, gts, names, save_csv_path):
     print("\n=== Final Artery+Vein Average Metrics (all samples) ===")
     for k, v in avg_metrics.items():
         print(f"{k}: {v:.4f}")
-
-def compute_clDice(pred, gt):
-    """
-    计算clDice指标
-    pred, gt: 二值数组, shape (H, W)
-    """
-    pred = pred.astype(bool)
-    gt = gt.astype(bool)
-
-    if pred.sum() == 0 or gt.sum() == 0:
-        return np.nan
-
-    # 提取骨架
-    skel_pred = skeletonize(pred)
-    skel_gt = skeletonize(gt)
-
-    # Precision-like: 预测骨架落在GT区域的比例
-    P = (skel_pred & gt).sum() / (skel_pred.sum() + 1e-8)
-
-    # Recall-like: GT骨架落在预测区域的比例
-    R = (skel_gt & pred).sum() / (skel_gt.sum() + 1e-8)
-
-    cl_dice = 2 * P * R / (P + R + 1e-8)
-    return cl_dice
-
 
 def feature_kl_distillation(feats_s, feats_t, temperature=1.0, weight_dict=None):
     """
