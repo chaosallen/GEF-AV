@@ -158,4 +158,9 @@ Key configurable parameters include:
 - Data augmentation settings  
 - Evaluation metrics selection
 
+## 📊 Results
 
+Below are comparison results demonstrating the effectiveness of our proposed Geometric Energy Field (GEF) framework.
+
+![Result1](results1.png)
+![Result2](results2.png)
