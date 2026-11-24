@@ -2,8 +2,7 @@
 
 This repository contains the official PyTorch implementation of the paper:
 
-**"Improving Retinal Artery-Vein Segmentation via Geometric Energy Fields"**  
-*Mingchao Li, Wenbo Zhang, Zhilin Zhou, Yizhe Zhang, Qiang Chen, Junyu Dong*
+M. Li, W. Zhang, Z. Zhou, Y. Zhang, Q. Chen and J. Dong, "Improving Retinal Artery-Vein Segmentation via Geometric Energy Fields," in IEEE Transactions on Medical Imaging, vol. 45, no. 11, pp. 5238-5252, Nov. 2026, doi: 10.1109/TMI.2026.3717907.
 
 ---
 
