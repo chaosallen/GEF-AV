@@ -169,9 +169,12 @@ Below are comparison results demonstrating the effectiveness of our proposed Geo
 If you find this work useful, please cite:
 
 ```bibtex
-@article{li2025GEF,
+@article{li2026GEF,
   title={Improving Retinal Artery-Vein Segmentation via Geometric Energy Fields},
   author={Li, Mingchao and Zhang, Wenbo and Zhou, Zhilin and Zhang, Yizhe and Chen, Qiang and Dong, Junyu},
-  journal={XXX},
-  year={2026}
+  journal={IEEE Transactions on Medical Imaging},
+  year={2026},
+  volume={45},
+  number={11},
+  pages={5238-5252},
 }
